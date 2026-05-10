@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Help in Turin</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root {
+  --bg:#f6f0df; --ink:#111; --muted:#555; --card:#fffaf0; --line:#111;
+}
+* { box-sizing:border-box; }
+html, body { margin:0; font-family:Arial, system-ui, sans-serif; background:var(--bg); color:var(--ink); font-size:20px; }
+button, input { font:inherit; }
+.screen { display:none; min-height:100vh; padding:16px; }
+.screen.active { display:block; }
+.topbar {
+  position:sticky; top:0; z-index:2000; background:rgba(246,240,223,.97);
+  padding:10px; border-bottom:4px solid #111; display:flex; gap:10px; justify-content:space-between; align-items:center;
+}
+.smallbtn { border:4px solid #111; background:#fff; border-radius:18px; padding:12px 16px; font-weight:900; cursor:pointer; }
+.hero { text-align:center; padding:24px 10px 12px; }
+.hero h1 { font-size:clamp(34px, 7vw, 70px); margin:0 0 10px; font-weight:1000; }
+.hero p { max-width:850px; margin:0 auto; color:#333; font-size:clamp(20px, 4vw, 30px); line-height:1.25; font-weight:700; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; max-width:1150px; margin:20px auto; }
+.langBtn, .choiceBtn, .catBtn {
+  border:5px solid #111; background:#fff; border-radius:30px; padding:22px 12px;
+  min-height:230px; font-weight:1000; box-shadow:0 9px 0 #111; cursor:pointer; text-align:center;
+}
+.langBtn:active, .choiceBtn:active, .catBtn:active { transform:translateY(5px); box-shadow:0 4px 0 #111; }
+
+.flagImg{
+  width:140px;
+  height:100px;
+  object-fit:cover;
+  border:5px solid #111;
+  border-radius:18px;
+  display:block;
+  margin:0 auto 14px;
+  box-shadow:0 5px 0 rgba(0,0,0,.25);
+}
+
+.icon { font-size:84px; display:block; line-height:1; margin-bottom:12px; }
+.native { font-size:34px; display:block; font-weight:1000; }
+.country { font-size:22px; color:#444; display:block; margin-top:10px; font-weight:900; }
+.viewGrid { display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:820px; margin:24px auto; }
+.choiceBtn { min-height:260px; }
+.bigIcon { font-size:100px; display:block; }
+.label { font-size:38px; display:block; margin-top:12px; }
+.searchWrap { max-width:900px; margin:14px auto; }
+.searchWrap input { width:100%; padding:18px; border:5px solid #111; border-radius:20px; background:#fff; font-size:25px; font-weight:800; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(310px,1fr)); gap:20px; max-width:1250px; margin:20px auto; }
+.card { background:var(--card); border:5px solid #111; border-radius:28px; padding:18px; box-shadow:0 7px 0 #111; }
+.cardHead { display:flex; gap:14px; align-items:center; margin-bottom:12px; }
+.cardIcon { font-size:62px; background:white; border:4px solid #111; border-radius:22px; width:100px; height:100px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.card h3 { margin:0; font-size:27px; line-height:1.1; }
+.row { margin:12px 0; line-height:1.25; font-size:20px; }
+.row b { display:block; font-size:15px; color:#333; text-transform:uppercase; letter-spacing:.05em; }
+.actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+.action { text-decoration:none; color:#111; border:4px solid #111; border-radius:18px; padding:15px 8px; background:#fff; font-weight:1000; text-align:center; }
+.call { background:#d9ffd9; }
+.maplink { background:#d8ebff; }
+.mapShell { position:relative; max-width:1250px; margin:18px auto; }
+#map { height:calc(100vh - 105px); width:100%; border:5px solid #111; border-radius:28px; z-index:1; background:#ddd; }
+.mapOverlay {
+  position:absolute; left:14px; right:14px; top:14px; z-index:1500; display:flex; gap:10px; overflow:auto;
+  padding:10px; background:rgba(255,255,255,.97); border:4px solid #111; border-radius:22px;
+}
+.mapOverlay button { flex:0 0 auto; border:4px solid #111; border-radius:18px; padding:12px 16px; background:#fff; font-weight:1000; cursor:pointer; }
+.mapOverlay button.activeFilter { background:#ffe08a; }
+.leaflet-div-icon { background:transparent; border:0; }
+.pin { font-size:35px; background:white; border:4px solid #111; border-radius:50%; width:60px; height:60px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 0 #111; }
+.adminBox { max-width:900px; margin:22px auto; background:#fff; border:5px dashed #111; border-radius:28px; padding:22px; }
+textarea { width:100%; min-height:230px; border:4px solid #111; border-radius:18px; padding:12px; }
+.hiddenAdminHint { position:fixed; right:8px; bottom:8px; opacity:.22; z-index:2500; }
+@media(max-width:700px) {
+  body { font-size:18px; }
+  .screen { padding:8px; }
+  .viewGrid { grid-template-columns:1fr; }
+  .choiceBtn { min-height:205px; }
+  .grid { grid-template-columns:1fr 1fr; gap:12px; }
+  .langBtn, .catBtn { min-height:145px; padding:14px 8px; }
+  .flag { font-size:52px; }
+  .icon { font-size:62px; }
+  .native { font-size:22px; }
+  .country { font-size:14px; }
+  .label { font-size:32px; }
+  .cards { grid-template-columns:1fr; }
+  .topbar { gap:6px; }
+  .smallbtn { padding:10px; font-size:16px; }
+  #map { height:calc(100vh - 85px); }
+  .mapOverlay { top:auto; bottom:14px; }
+}
+</style>
+</head>
+<body>
+
+<section id="langScreen" class="screen active">
+  <div class="hero">
+    <h1>🆘 Help in Turin</h1>
+    <p id="chooseText">Choose language</p>
+  </div>
+  <div id="langGrid" class="grid"></div>
+</section>
+
+<section id="homeScreen" class="screen">
+  <div class="topbar">
+    <button class="smallbtn" onclick="showScreen('langScreen')">🌍 <span data-t="change">Change language</span></button>
+  </div>
+  <div class="hero">
+    <h1 data-t="hero">Help in Turin</h1>
+    <p data-t="sub">Find food, shower, clothes, doctor and help.</p>
+  </div>
+  <h2 style="text-align:center;font-size:36px" data-t="viewfirst">Choose how to see</h2>
+  <div class="viewGrid">
+    <button class="choiceBtn" onclick="openMode('list')"><span class="bigIcon">📋</span><span class="label" data-t="list">List</span></button>
+    <button class="choiceBtn" onclick="openMode('map')"><span class="bigIcon">🗺️</span><span class="label" data-t="map">Map</span></button>
+  </div>
+  <button class="hiddenAdminHint smallbtn" onclick="showScreen('adminScreen')">⚙️</button>
+</section>
+
+<section id="categoryScreen" class="screen">
+  <div class="topbar">
+    <button class="smallbtn" onclick="showScreen('homeScreen')">⬅️ <span data-t="back">Back</span></button>
+    <button class="smallbtn" onclick="showScreen('langScreen')">🌍 <span data-t="change">Change language</span></button>
+  </div>
+  <div class="hero"><h1 data-t="need">What do you need?</h1></div>
+  <div id="catGrid" class="grid"></div>
+</section>
+
+<section id="listScreen" class="screen">
+  <div class="topbar">
+    <button class="smallbtn" onclick="showScreen('categoryScreen')">⬅️ <span data-t="back">Back</span></button>
+    <button class="smallbtn" onclick="showScreen('langScreen')">🌍 <span data-t="change">Change language</span></button>
+  </div>
+  <div class="searchWrap"><input id="searchInput" oninput="renderList()"></div>
+  <div id="cards" class="cards"></div>
+</section>
+
+<section id="mapScreen" class="screen">
+  <div class="topbar">
+    <button class="smallbtn" onclick="showScreen('categoryScreen')">⬅️ <span data-t="back">Back</span></button>
+    <button class="smallbtn" onclick="showScreen('langScreen')">🌍 <span data-t="change">Change language</span></button>
+  </div>
+  <div class="mapShell">
+    <div id="mapFilters" class="mapOverlay"></div>
+    <div id="map"></div>
+  </div>
+</section>
+
+<section id="adminScreen" class="screen">
+  <div class="topbar">
+    <button class="smallbtn" onclick="showScreen('homeScreen')">⬅️ <span data-t="back">Back</span></button>
+  </div>
+  <div class="adminBox">
+    <h1>Admin CSV upload</h1>
+    <p>For operators only. Later you can protect or hide this route.</p>
+    <input type="file" accept=".csv" onchange="loadCSV(event)">
+    <h3>Example CSV</h3>
+    <textarea readonly>cat,name,address,phone,days,hours,bus,notes
+food,Example food place,"Via Roma 1, Torino",011000000,Monday to Friday,10:00-12:00,4 11,Warm meal</textarea>
+  </div>
+</section>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const LOCATIONS = [{"cat": "help", "name": "Day centre La Sosta / Social laundry - Sermig", "address": "Via Giolitti 40, Torino", "phone": "011480433", "days": "Monday, Wednesday, Friday; Saturday", "hours": "15:30–18:00; Saturday 10:00–12:00", "bus": "", "notes": "Day centre and social laundry"}, {"cat": "help", "name": "Sermig - Dormitory access information", "address": "Piazza Borgo Dora 61, Torino", "phone": "0114368566", "days": "Monday to Friday", "hours": "09:00–17:00", "bus": "", "notes": "Ask at switchboard to request access to dormitories"}, {"cat": "help", "name": "Adults in difficulty service - Torino", "address": "Via Bologna 51, Torino", "phone": "01101129433", "days": "Monday to Friday", "hours": "09:30–16:00", "bus": "", "notes": "Social assistance for adults in difficulty"}, {"cat": "help", "name": "Homeless service", "address": "Via Sacchi 47, Torino", "phone": "011011315310", "days": "Monday to Saturday", "hours": "09:30–13:30; 14:00–16:00", "bus": "", "notes": "Help for homeless people"}, {"cat": "shower", "name": "Bagno Pubblico Monterosa", "address": "Via Agliè 9, Torino", "phone": "0115533938", "days": "Monday, Tuesday, Friday; Wednesday, Thursday; Saturday", "hours": "10:00–18:30; 13:30–18:30; Saturday 10:00–17:00", "bus": "4, 25, 27, 57", "notes": "Public shower / hygiene"}, {"cat": "shower", "name": "Bagni Pubblici Social Factory", "address": "Via Emanuele Luserna di Rorà 8, Torino", "phone": "", "days": "Men: Monday to Thursday and Saturday; Women: Friday", "hours": "08:30–12:30", "bus": "17, 8, 34, 35, 74, subway", "notes": "Public shower / hygiene"}, {"cat": "shower", "name": "Casa Santa Luisa", "address": "Via Nizza 24, Torino", "phone": "0115780824", "days": "Monday to Thursday and Saturday", "hours": "Only with booking", "bus": "Subway Marconi, 16, 18, 35", "notes": "Showers; haircut only with booking"}, {"cat": "shower", "name": "Bagni Pubblici Campidoglio", "address": "Via Bianzè 28, Torino", "phone": "0117493691", "days": "Tuesday, Thursday; Saturday", "hours": "12:30–18:00; Saturday 08:30–15:00", "bus": "13, 65, subway Bernini", "notes": "Public shower / hygiene"}, {"cat": "shower", "name": "Ambulatorio Gamba", "address": "Via Sacchi 49, Torino", "phone": "", "days": "Monday and Wednesday men; Tuesday and Saturday women", "hours": "15:00–18:00", "bus": "4, 16", "notes": "Shower voucher on Thursday"}, {"cat": "clothes", "name": "Sermig", "address": "Via Pinerolo 5, Torino", "phone": "0114368566", "days": "Every day", "hours": "09:00–18:00", "bus": "4, 11, 50, 51", "notes": "Clothes"}, {"cat": "clothes", "name": "Abito", "address": "Via Santa Maria 6/I, Torino", "phone": "0114176582", "days": "With telephone appointment", "hours": "09:30–12:30", "bus": "4, 11, 19, 27, 50, 51", "notes": "Clothes"}, {"cat": "clothes", "name": "Servizi Vincenziani", "address": "Via Saccarelli 21, Torino", "phone": "0116205367", "days": "Tuesday with appointment", "hours": "09:30–12:00", "bus": "3, 16, 72", "notes": "Clothes"}, {"cat": "clothes", "name": "Parrocchia Madonna delle Rose", "address": "Via Bianzè 28, Torino", "phone": "0113190216", "days": "Tuesday for Italians; Wednesday for foreigners", "hours": "09:00–11:00", "bus": "4, 13, 63", "notes": "Clothes"}, {"cat": "clothes", "name": "Chiesa Valdese", "address": "Corso Vittorio Emanuele II 23, Torino", "phone": "", "days": "Tuesday and Friday morning; Thursday afternoon", "hours": "With appointment", "bus": "4, 16", "notes": "Clothes"}, {"cat": "clothes", "name": "Piccola Casa Divina Provvidenza", "address": "Via Andreis 26, Torino", "phone": "0115225618", "days": "Booking: Tuesday for men; Thursday for children", "hours": "09:00–10:00", "bus": "3, 4, 11, 19, 50, 51", "notes": "Clothes"}, {"cat": "food", "name": "Frati Cappuccini", "address": "Via Giardino 35, Torino", "phone": "0116604414", "days": "Monday to Saturday", "hours": "16:00–17:00", "bus": "66, 70, 73, 53, 13", "notes": "Sandwiches"}, {"cat": "food", "name": "Piccola Casa della Divina Provvidenza", "address": "Via Andreis 26, Torino", "phone": "0115223111", "days": "Monday to Saturday", "hours": "11:00–12:30", "bus": "3, 4, 11, 19, 50, 51", "notes": "Take-away warm meals. Show up Monday/Wednesday/Friday 09:00–10:30 in Via Andreis 18/5"}, {"cat": "food", "name": "Mensa del povero", "address": "Via Netro 5, Torino", "phone": "011740485", "days": "Monday to Friday", "hours": "11:00–12:00", "bus": "9, 13, 16", "notes": "Warm meals and bags"}, {"cat": "food", "name": "Mensa Vincenziana", "address": "Via Saccarelli 2, Torino", "phone": "011480433", "days": "Thursday", "hours": "09:00–11:00", "bus": "3, 16", "notes": "Warm meals and bags"}, {"cat": "food", "name": "Sant’Antonio da Padova", "address": "Via Sant’Antonio da Padova 7, Torino", "phone": "0115621917", "days": "Monday to Saturday", "hours": "11:00–12:15", "bus": "Subway 18 Dicembre, 13, 5, 56", "notes": "Warm meals and bags"}, {"cat": "food", "name": "Asili Notturni Umberto I", "address": "Via Ormea 119, Torino", "phone": "0115660804", "days": "Monday to Saturday, no August", "hours": "18:00–19:00", "bus": "1, 8, 34, 35, 42, 67", "notes": "Canteen then bags"}, {"cat": "food", "name": "Il Cenacolo eucaristico della trasfigurazione", "address": "Via Belfiore 12, Torino", "phone": "0114377070", "days": "Monday-Friday; Saturday; Sunday", "hours": "14:30–17:30; Saturday 09:00–11:00; Sunday 09:30–12:00", "bus": "Subway Marconi, 8, 67", "notes": "Warm meal; bags; packs for families"}, {"cat": "food", "name": "Casa Santa Luisa", "address": "Via Nizza 24, Torino", "phone": "0115780824", "days": "Monday to Saturday", "hours": "07:15–08:35", "bus": "Subway Marconi, 1, 35, 24", "notes": "Breakfast"}, {"cat": "food", "name": "Messa del Povero", "address": "Via Guinicelli 4, Largo Tabacchi, Torino", "phone": "3703747520", "days": "Sunday", "hours": "08:30 breakfast; 10:30 lunch", "bus": "56 last stop, 75", "notes": "Breakfast, lunch and takeaway bags"}, {"cat": "health", "name": "ER Martini", "address": "Via Tofane 71, Torino", "phone": "", "days": "Emergency", "hours": "Always check before going", "bus": "", "notes": "Emergency room"}, {"cat": "health", "name": "ER CTO orthopedic", "address": "Via Zuretti 29, Torino", "phone": "", "days": "Emergency", "hours": "Always check before going", "bus": "", "notes": "Orthopedic emergency room"}, {"cat": "health", "name": "ER Molinette", "address": "Corso Bramante 88, Torino", "phone": "", "days": "Emergency", "hours": "Always check before going", "bus": "", "notes": "Emergency room"}, {"cat": "health", "name": "ER San Giovanni Bosco", "address": "Piazza Donatore del Sangue 3, Torino", "phone": "", "days": "Emergency", "hours": "Always check before going", "bus": "", "notes": "Emergency room"}, {"cat": "health", "name": "ER Maria Vittoria", "address": "Via Cibrario 72, Torino", "phone": "", "days": "Emergency", "hours": "Always check before going", "bus": "", "notes": "Emergency room"}, {"cat": "health", "name": "ER Gradenigo", "address": "Corso Regina Margherita 8, Torino", "phone": "", "days": "Emergency", "hours": "Always check before going", "bus": "", "notes": "Emergency room"}, {"cat": "health", "name": "Ambulatorio Gamba", "address": "Via Sacchi 49, Torino", "phone": "0114359374", "days": "Monday to Saturday", "hours": "15:30–18:00", "bus": "", "notes": "Visits and medication"}, {"cat": "health", "name": "Camminare Insieme", "address": "Via Cottolengo 24/A, Torino", "phone": "0114365980", "days": "Monday-Friday; Saturday", "hours": "09:00–12:00, 14:00–17:00; Saturday 09:00–12:00", "bus": "", "notes": "Medical help"}, {"cat": "health", "name": "Granetti", "address": "Via Cottolengo 13, Torino", "phone": "0115294408", "days": "Monday-Friday; Saturday; Sunday", "hours": "13:30–18:30; Saturday 08:00–12:30; Sunday 08:30–12:00", "bus": "", "notes": "Injections, dressings, bandages"}, {"cat": "health", "name": "Sermig", "address": "Via Andreis 18/44, Torino", "phone": "0114368566", "days": "Monday to Saturday", "hours": "09:00–12:00; 15:00–19:00", "bus": "", "notes": "Medical help"}, {"cat": "health", "name": "I.S.I. for immigrants", "address": "Lungo Dora Savona 24, Torino", "phone": "0112403625", "days": "Monday-Friday; ambulatory Monday-Thursday", "hours": "08:30–12:00, 13:00–15:00; ambulatory 09:00–14:00", "bus": "", "notes": "Health service for immigrants"}, {"cat": "mental", "name": "Centro Migranti Marco Cavallo", "address": "Via Cecchi 17, Torino", "phone": "0114359222", "days": "Appointment", "hours": "Appointment", "bus": "", "notes": "Mental health"}, {"cat": "mental", "name": "Centro Frantz Fanon", "address": "Via San Francesco d’Assisi 3, Torino", "phone": "0114546552", "days": "Appointment Monday and Wednesday", "hours": "10:00–18:00", "bus": "", "notes": "Mental health"}];
+const LANGS = {"it": {"flag": "🇮🇹", "country": "Italia", "native": "Italiano", "choose": "Scegli lingua", "hero": "Aiuto a Torino", "sub": "Trova cibo, doccia, vestiti, medico e aiuto. Usa i pulsanti grandi.", "list": "Lista", "map": "Mappa", "back": "Indietro", "change": "Cambia lingua", "admin": "Admin", "food": "Mangiare", "shower": "Doccia", "clothes": "Vestiti", "health": "Medico", "help": "Aiuto", "mental": "Mente", "all": "Tutto", "call": "Chiama", "openmap": "Apri mappa", "address": "Indirizzo", "service": "Servizio", "days": "Giorni", "hours": "Orari", "bus": "Bus", "notes": "Note", "search": "Cerca via o nome", "viewfirst": "Scegli come vedere", "need": "Di cosa hai bisogno?"}, "en": {"flag": "🇬🇧", "country": "UK / USA", "native": "English", "choose": "Choose language", "hero": "Help in Turin", "sub": "Find food, shower, clothes, doctor and help. Use the big buttons.", "list": "List", "map": "Map", "back": "Back", "change": "Change language", "admin": "Admin", "food": "Food", "shower": "Shower", "clothes": "Clothes", "health": "Doctor", "help": "Help", "mental": "Mind", "all": "All", "call": "Call", "openmap": "Open map", "address": "Address", "service": "Service", "days": "Days", "hours": "Hours", "bus": "Bus", "notes": "Notes", "search": "Search street or name", "viewfirst": "Choose how to see", "need": "What do you need?"}, "fr": {"flag": "🇫🇷", "country": "France / Africa", "native": "Français", "choose": "Choisir la langue", "hero": "Aide à Turin", "sub": "Trouver nourriture, douche, vêtements, médecin et aide.", "list": "Liste", "map": "Carte", "back": "Retour", "change": "Changer langue", "admin": "Admin", "food": "Manger", "shower": "Douche", "clothes": "Vêtements", "health": "Médecin", "help": "Aide", "mental": "Mental", "all": "Tout", "call": "Appeler", "openmap": "Ouvrir carte", "address": "Adresse", "service": "Service", "days": "Jours", "hours": "Horaires", "bus": "Bus", "notes": "Notes", "search": "Chercher rue ou nom", "viewfirst": "Choisir comment voir", "need": "De quoi avez-vous besoin ?"}, "ar": {"flag": "🇸🇩", "country": "Sudan / Arab countries", "native": "العربية", "choose": "اختر اللغة", "hero": "مساعدة في تورينو", "sub": "ابحث عن طعام، حمام، ملابس، طبيب ومساعدة.", "list": "قائمة", "map": "خريطة", "back": "رجوع", "change": "تغيير اللغة", "admin": "إدارة", "food": "طعام", "shower": "حمام", "clothes": "ملابس", "health": "طبيب", "help": "مساعدة", "mental": "نفسية", "all": "الكل", "call": "اتصال", "openmap": "افتح الخريطة", "address": "العنوان", "service": "الخدمة", "days": "الأيام", "hours": "الوقت", "bus": "حافلة", "notes": "ملاحظات", "search": "ابحث عن شارع أو اسم", "viewfirst": "اختر طريقة العرض", "need": "ماذا تحتاج؟"}, "sw": {"flag": "🇰🇪", "country": "Kenya / Tanzania", "native": "Kiswahili", "choose": "Chagua lugha", "hero": "Msaada Torino", "sub": "Pata chakula, kuoga, nguo, daktari na msaada.", "list": "Orodha", "map": "Ramani", "back": "Rudi", "change": "Badili lugha", "admin": "Admin", "food": "Chakula", "shower": "Kuoga", "clothes": "Nguo", "health": "Daktari", "help": "Msaada", "mental": "Akili", "all": "Zote", "call": "Piga simu", "openmap": "Fungua ramani", "address": "Anwani", "service": "Huduma", "days": "Siku", "hours": "Saa", "bus": "Basi", "notes": "Maelezo", "search": "Tafuta barabara au jina", "viewfirst": "Chagua namna ya kuona", "need": "Unahitaji nini?"}, "so": {"flag": "🇸🇴", "country": "Somalia", "native": "Soomaali", "choose": "Dooro luqadda", "hero": "Caawimaad Torino", "sub": "Hel cunto, qubeys, dhar, dhakhtar iyo caawimaad.", "list": "Liis", "map": "Khariidad", "back": "Noqo", "change": "Bedel luqad", "admin": "Admin", "food": "Cunto", "shower": "Qubeys", "clothes": "Dhar", "health": "Dhakhtar", "help": "Caawin", "mental": "Maskax", "all": "Dhammaan", "call": "Wac", "openmap": "Fur khariidad", "address": "Cinwaan", "service": "Adeeg", "days": "Maalmo", "hours": "Saacado", "bus": "Bas", "notes": "Qoraal", "search": "Raadi waddo ama magac", "viewfirst": "Dooro sida loo arko", "need": "Maxaad u baahan tahay?"}, "ti": {"flag": "🇪🇷", "country": "Eritrea", "native": "ትግርኛ", "choose": "ቋንቋ ምረጽ", "hero": "ሓገዝ ኣብ ቶሪኖ", "sub": "መግቢ፣ ሻወር፣ ክዳን፣ ሓኪምን ሓገዝን ርኸብ።", "list": "ዝርዝር", "map": "ካርታ", "back": "ተመለስ", "change": "ቋንቋ ቀይር", "admin": "Admin", "food": "መግቢ", "shower": "ሻወር", "clothes": "ክዳን", "health": "ሓኪም", "help": "ሓገዝ", "mental": "ኣእምሮ", "all": "ኩሉ", "call": "ደውል", "openmap": "ካርታ ክፈት", "address": "ኣድራሻ", "service": "ኣገልግሎት", "days": "መዓልታት", "hours": "ሰዓታት", "bus": "ባስ", "notes": "መዘኻኸሪ", "search": "መንገዲ ወይ ስም ድለ", "viewfirst": "ከመይ ክትርኢ ምረጽ", "need": "እንታይ የድልየካ?"}, "ha": {"flag": "🇳🇬", "country": "Nigeria / Niger", "native": "Hausa", "choose": "Zaɓi harshe", "hero": "Taimako a Torino", "sub": "Nemo abinci, wanka, tufafi, likita da taimako.", "list": "Jeri", "map": "Taswira", "back": "Koma", "change": "Canza harshe", "admin": "Admin", "food": "Abinci", "shower": "Wanka", "clothes": "Tufafi", "health": "Likita", "help": "Taimako", "mental": "Hankali", "all": "Duka", "call": "Kira", "openmap": "Buɗe taswira", "address": "Adireshi", "service": "Sabis", "days": "Kwanaki", "hours": "Awanni", "bus": "Bas", "notes": "Bayani", "search": "Nemo titi ko suna", "viewfirst": "Zaɓi yadda zaka gani", "need": "Me kake bukata?"}, "yo": {"flag": "🇳🇬", "country": "Nigeria", "native": "Yorùbá", "choose": "Yan ede", "hero": "Iranwọ ni Torino", "sub": "Wa ounjẹ, ibi iwẹ, aṣọ, dokita ati iranlọwọ.", "list": "Akojọ", "map": "Maapu", "back": "Pada", "change": "Yi ede pada", "admin": "Admin", "food": "Ounjẹ", "shower": "Iwẹ", "clothes": "Aṣọ", "health": "Dokita", "help": "Iranwọ", "mental": "Ọpọlọ", "all": "Gbogbo", "call": "Pe", "openmap": "Ṣii maapu", "address": "Adirẹsi", "service": "Iṣẹ", "days": "Ọjọ", "hours": "Wakati", "bus": "Bọọsi", "notes": "Akọsilẹ", "search": "Wa opopona tabi orukọ", "viewfirst": "Yan bi o ṣe fẹ ri", "need": "Kini o nilo?"}, "wo": {"flag": "🇸🇳", "country": "Senegal", "native": "Wolof", "choose": "Tànn làkk", "hero": "Ndimbal ci Torino", "sub": "Seet lekk, sangu, yére, doktoor ak ndimbal.", "list": "Limu", "map": "Kart", "back": "Dellusi", "change": "Soppi làkk", "admin": "Admin", "food": "Lekk", "shower": "Sangu", "clothes": "Yére", "health": "Doktoor", "help": "Ndimbal", "mental": "Xel", "all": "Lépp", "call": "Woote", "openmap": "Ubbil kart", "address": "Adrees", "service": "Sarwiis", "days": "Fan yi", "hours": "Waxtu", "bus": "Bis", "notes": "Karmat", "search": "Seet mbedd walla tur", "viewfirst": "Tànn naka nga koy gis", "need": "Lan nga soxla?"}, "pt": {"flag": "🇦🇴", "country": "Angola / Portugal", "native": "Português", "choose": "Escolher idioma", "hero": "Ajuda em Turim", "sub": "Encontre comida, banho, roupa, médico e ajuda.", "list": "Lista", "map": "Mapa", "back": "Voltar", "change": "Mudar idioma", "admin": "Admin", "food": "Comida", "shower": "Banho", "clothes": "Roupa", "health": "Médico", "help": "Ajuda", "mental": "Mental", "all": "Tudo", "call": "Ligar", "openmap": "Abrir mapa", "address": "Endereço", "service": "Serviço", "days": "Dias", "hours": "Horários", "bus": "Autocarro", "notes": "Notas", "search": "Procurar rua ou nome", "viewfirst": "Escolha como ver", "need": "Do que precisa?"}, "am": {"flag": "🇪🇹", "country": "Ethiopia", "native": "አማርኛ", "choose": "ቋንቋ ይምረጡ", "hero": "በቶሪኖ እርዳታ", "sub": "ምግብ፣ መታጠቢያ፣ ልብስ፣ ሐኪም እና እርዳታ ያግኙ።", "list": "ዝርዝር", "map": "ካርታ", "back": "ተመለስ", "change": "ቋንቋ ቀይር", "admin": "Admin", "food": "ምግብ", "shower": "መታጠቢያ", "clothes": "ልብስ", "health": "ሐኪም", "help": "እርዳታ", "mental": "አእምሮ", "all": "ሁሉም", "call": "ይደውሉ", "openmap": "ካርታ ክፈት", "address": "አድራሻ", "service": "አገልግሎት", "days": "ቀናት", "hours": "ሰዓት", "bus": "አውቶቡስ", "notes": "ማስታወሻ", "search": "መንገድ ወይም ስም ፈልግ", "viewfirst": "እንዴት ማየት ይፈልጋሉ?", "need": "ምን ይፈልጋሉ?"}, "ur": {"flag": "🇵🇰", "country": "Pakistan", "native": "اردو", "choose": "زبان منتخب کریں", "hero": "تورین میں مدد", "sub": "کھانا، نہانا، کپڑے، ڈاکٹر اور مدد تلاش کریں۔", "list": "فہرست", "map": "نقشہ", "back": "واپس", "change": "زبان بدلیں", "admin": "ایڈمن", "food": "کھانا", "shower": "نہانا", "clothes": "کپڑے", "health": "ڈاکٹر", "help": "مدد", "mental": "ذہنی", "all": "سب", "call": "کال", "openmap": "نقشہ کھولیں", "address": "پتہ", "service": "خدمت", "days": "دن", "hours": "اوقات", "bus": "بس", "notes": "نوٹ", "search": "سڑک یا نام تلاش کریں", "viewfirst": "دیکھنے کا طریقہ چنیں", "need": "آپ کو کیا چاہیے؟"}, "bn": {"flag": "🇧🇩", "country": "Bangladesh", "native": "বাংলা", "choose": "ভাষা বেছে নিন", "hero": "তুরিনে সাহায্য", "sub": "খাবার, গোসল, কাপড়, ডাক্তার ও সহায়তা খুঁজুন।", "list": "তালিকা", "map": "মানচিত্র", "back": "ফিরে যান", "change": "ভাষা বদলান", "admin": "Admin", "food": "খাবার", "shower": "গোসল", "clothes": "কাপড়", "health": "ডাক্তার", "help": "সাহায্য", "mental": "মানসিক", "all": "সব", "call": "ফোন", "openmap": "মানচিত্র খুলুন", "address": "ঠিকানা", "service": "সেবা", "days": "দিন", "hours": "সময়", "bus": "বাস", "notes": "নোট", "search": "রাস্তা বা নাম খুঁজুন", "viewfirst": "কীভাবে দেখতে চান?", "need": "আপনার কী দরকার?"}, "fa": {"flag": "🇦🇫", "country": "Afghanistan / Iran", "native": "دری / فارسی", "choose": "زبان را انتخاب کنید", "hero": "کمک در تورین", "sub": "غذا، حمام، لباس، داکتر و کمک پیدا کنید.", "list": "لیست", "map": "نقشه", "back": "برگشت", "change": "تغییر زبان", "admin": "مدیر", "food": "غذا", "shower": "حمام", "clothes": "لباس", "health": "داکتر", "help": "کمک", "mental": "روان", "all": "همه", "call": "تماس", "openmap": "باز کردن نقشه", "address": "آدرس", "service": "خدمت", "days": "روزها", "hours": "ساعت‌ها", "bus": "بس", "notes": "یادداشت", "search": "جستجوی خیابان یا نام", "viewfirst": "روش دیدن را انتخاب کنید", "need": "چه نیاز دارید؟"}, "ps": {"flag": "🇦🇫", "country": "Afghanistan", "native": "پښتو", "choose": "ژبه وټاکئ", "hero": "په تورینو کې مرسته", "sub": "خواړه، حمام، کالي، ډاکټر او مرسته ومومئ.", "list": "لیست", "map": "نقشه", "back": "شاته", "change": "ژبه بدل کړئ", "admin": "Admin", "food": "خواړه", "shower": "حمام", "clothes": "کالي", "health": "ډاکټر", "help": "مرسته", "mental": "ذهن", "all": "ټول", "call": "زنګ", "openmap": "نقشه خلاصه کړئ", "address": "پته", "service": "خدمت", "days": "ورځې", "hours": "ساعتونه", "bus": "بس", "notes": "یادښت", "search": "سړک یا نوم ولټوئ", "viewfirst": "د لیدلو طریقه وټاکئ", "need": "څه ته اړتیا لرئ؟"}};
+const ICONS = {"food": "🍲", "shower": "🚿", "clothes": "🧥", "health": "❤️‍🩹", "help": "🆘", "mental": "🧠", "all": "⭐"};
+const CATS = ["food", "shower", "clothes", "health", "help", "mental", "all"];
+let currentLang = localStorage.getItem("torino_help_lang") || "it";
+let currentMode = "list";
+let currentCat = "all";
+let map = null;
+let markers = [];
+
+function t(k) { return (LANGS[currentLang] && LANGS[currentLang][k]) || LANGS.en[k] || k; }
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  applyLang();
+  if (id === "mapScreen") setTimeout(initMap, 80);
+}
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem("torino_help_lang", lang);
+  applyLang();
+  showScreen("homeScreen");
+}
+function applyLang() {
+  document.documentElement.lang = currentLang;
+  document.documentElement.dir = ["ar","ur","fa","ps"].includes(currentLang) ? "rtl" : "ltr";
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = t(el.dataset.t));
+  document.getElementById("chooseText").textContent = t("choose");
+  const inp = document.getElementById("searchInput");
+  if (inp) inp.placeholder = t("search");
+  renderCategories();
+  renderMapFilters();
+  if (document.getElementById("listScreen").classList.contains("active")) renderList();
+}
+function renderLanguages() {
+  const grid = document.getElementById("langGrid");
+  grid.innerHTML = "";
+  Object.entries(LANGS).forEach(([code, l]) => {
+    const b = document.createElement("button");
+    b.className = "langBtn";
+    const flagMap = {
+      "🇮🇹":"it","🇬🇧":"gb","🇫🇷":"fr","🇸🇩":"sd","🇰🇪":"ke","🇸🇴":"so",
+      "🇪🇷":"er","🇳🇬":"ng","🇸🇳":"sn","🇦🇴":"ao","🇪🇹":"et",
+      "🇵🇰":"pk","🇧🇩":"bd","🇦🇫":"af"
+    };
+    const cc = flagMap[l.flag] || "un";
+    b.innerHTML = `<img class="flagImg" src="https://flagcdn.com/w160/${cc}.png" alt="${l.country} flag">
+    <span class="native">${l.native}</span>
+    <span class="country">${l.country}</span>`;
+    b.onclick = () => setLang(code);
+    grid.appendChild(b);
+  });
+}
+function openMode(mode) {
+  currentMode = mode;
+  showScreen("categoryScreen");
+}
+function renderCategories() {
+  const grid = document.getElementById("catGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  CATS.forEach(cat => {
+    const b = document.createElement("button");
+    b.className = "catBtn";
+    b.innerHTML = `<span class="icon">${ICONS[cat]}</span><span class="label">${t(cat)}</span>`;
+    b.onclick = () => {
+      currentCat = cat;
+      if (currentMode === "map") showScreen("mapScreen");
+      else showScreen("listScreen");
+    };
+    grid.appendChild(b);
+  });
+}
+function filtered() {
+  const q = (document.getElementById("searchInput")?.value || "").toLowerCase().trim();
+  return LOCATIONS.filter(x => {
+    const catOk = currentCat === "all" || x.cat === currentCat;
+    const qOk = !q || Object.values(x).join(" ").toLowerCase().includes(q);
+    return catOk && qOk;
+  });
+}
+function esc(s) { return String(s || "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function mapsUrl(address) { return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(address); }
+function renderList() {
+  const cards = document.getElementById("cards");
+  cards.innerHTML = "";
+  filtered().forEach(x => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `
+      <div class="cardHead">
+        <div class="cardIcon">${ICONS[x.cat] || "📍"}</div>
+        <h3>${esc(x.name)}</h3>
+      </div>
+      <div class="row"><b>📍 ${t("address")}</b>${esc(x.address)}</div>
+      <div class="row"><b>🧾 ${t("service")}</b>${esc(t(x.cat))} — ${esc(x.notes)}</div>
+      <div class="row"><b>📅 ${t("days")}</b>${esc(x.days)}</div>
+      <div class="row"><b>🕒 ${t("hours")}</b>${esc(x.hours)}</div>
+      ${x.bus ? `<div class="row"><b>🚌 ${t("bus")}</b>${esc(x.bus)}</div>` : ""}
+      <div class="actions">
+        ${x.phone ? `<a class="action call" href="tel:${esc(x.phone)}">☎️ ${t("call")}</a>` : `<span></span>`}
+        <a class="action maplink" target="_blank" href="${mapsUrl(x.address)}">🗺️ ${t("openmap")}</a>
+      </div>
+    `;
+    cards.appendChild(div);
+  });
+}
+function renderMapFilters() {
+  const mf = document.getElementById("mapFilters");
+  if (!mf) return;
+  mf.innerHTML = "";
+  CATS.forEach(cat => {
+    const b = document.createElement("button");
+    b.className = cat === currentCat ? "activeFilter" : "";
+    b.innerHTML = `${ICONS[cat]} ${t(cat)}`;
+    b.onclick = () => { currentCat = cat; renderMapFilters(); renderMarkers(); };
+    mf.appendChild(b);
+  });
+}
+function pseudoCoords(address, i) {
+  let h = 0; for (let c of address) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const lat = 45.0703 + (((h % 1000) / 1000) - .5) * 0.055;
+  const lng = 7.6869 + ((((h/1000|0) % 1000) / 1000) - .5) * 0.075;
+  return [lat, lng];
+}
+function initMap() {
+  if (!map) {
+    map = L.map("map").setView([45.0703, 7.6869], 13);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap"
+    }).addTo(map);
+  }
+  map.invalidateSize();
+  renderMarkers();
+}
+function renderMarkers() {
+  if (!map) return;
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  LOCATIONS.filter(x => currentCat === "all" || x.cat === currentCat).forEach((x, i) => {
+    const coord = pseudoCoords(x.address, i);
+    const icon = L.divIcon({
+      html:`<div class="pin">${ICONS[x.cat] || "📍"}</div>`,
+      className:"",
+      iconSize:[60,60],
+      iconAnchor:[30,30]
+    });
+    const m = L.marker(coord, {icon}).addTo(map);
+    m.bindPopup(`<b>${esc(x.name)}</b><br>${esc(x.address)}<br><a target="_blank" href="${mapsUrl(x.address)}">${t("openmap")}</a>`);
+    markers.push(m);
+  });
+}
+function showAdmin() { showScreen("adminScreen"); }
+function loadCSV(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => alert("CSV loaded in browser preview. For production, save it to the data file.");
+  reader.readAsText(f);
+}
+
+renderLanguages();
+applyLang();
+</script>
+</body>
+</html>
